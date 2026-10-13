@@ -1,7 +1,6 @@
-import json
-import time
-import requests
 import streamlit as st
+from google import genai
+from google.genai import errors
 
 # Konfiguracja strony pod telefony i tablety Apple
 st.set_page_config(
@@ -50,10 +49,10 @@ st.markdown(
 
 # Pobranie klucza API z sekretów Streamlita
 if "GEMINI_API_KEY" in st.secrets:
-    API_KEY = st.secrets["GEMINI_API_KEY"]
+    api_key = st.secrets["GEMINI_API_KEY"]
 else:
     st.error("Brak klucza GEMINI_API_KEY w ustawieniach serwera (Secrets)!")
-    API_KEY = None
+    api_key = None
 
 st.title("🍳 Co dzisiaj jemy?")
 st.write("Wpisz co mamy w domu, a wyczarujemy przepis z dokładnym makro!")
@@ -83,7 +82,7 @@ with col2:
     )
 
 if st.button("Szukaj przepisu 🚀"):
-    if not API_KEY:
+    if not api_key:
         st.error("Uzupełnij klucz API w sekretach Streamlita!")
     elif skladniki:
         with st.spinner("Wyczarowujemy przepis i liczymy makro..."):
@@ -104,50 +103,25 @@ if st.button("Szukaj przepisu 🚀"):
                - Instrukcję przygotowania krok po kroku
             4. Używaj głównie tego, co podałem (+ podstawy: sól, pieprz, woda, odrobina oleju). Jeśli coś warto dokupić, napisz to krótko w osobnej sekcji na końcu.
             
-            Napisz to czytelnie i przejrzyście w Markdown, żeby wygodnie czytało się na ekranie iPhone'a.
+            Napisz to czytelnie i przejriiście w Markdown, żeby wygodnie czytało się na ekranie iPhone'a.
             """
 
-            # Lista modeli do testowania po kolei (system automatycznego przełączania zapasowego)
-            dostepne_modele = [
-                "gemini-3.8-flash",
-                "gemini-1.5-flash",
-                "gemini-1.5-pro",
-                "gemini-2.5-flash"
-            ]
-
-            sukces = False
-            tekst_odpowiedzi = ""
-
-            headers = {"Content-Type": "application/json"}
-            payload = {"contents": [{"parts": [{"text": prompt}]}]}
-
-            for model_name in dostepne_modele:
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={API_KEY}"
-                try:
-                    response = requests.post(
-                        url, headers=headers, data=json.dumps(payload), timeout=12
-                    )
-                    res_json = response.json()
-
-                    if response.status_code == 200:
-                        tekst_odpowiedzi = res_json["candidates"][0]["content"]["parts"][0]["text"]
-                        sukces = True
-                        break
-                    else:
-                        # Jeśli model jest przeciążony lub niedostępny, pętla natychmiast sprawdza kolejny z listy
-                        error_msg = res_json.get("error", {}).get("message", "")
-                        if "high demand" in error_msg.lower() or "not found" in error_msg.lower() or "overloaded" in error_msg.lower():
-                            continue
-                        else:
-                            # Inny błąd - też próbujemy kolejny model, a w ostateczności zapiszemy komunikat
-                            continue
-                except Exception:
-                    continue
-
-            if sukces:
-                st.markdown("---")
-                st.markdown(tekst_odpowiedzi)
-            else:
-                st.error("Wszystkie zapasowe kanały Google są obecnie mocno obciążone. Odczekaj 5 sekund i kliknij ponownie.")
+            try:
+                client = genai.Client(api_key=api_key)
+                response = client.models.generate_content(
+                    model='gemini-2.5-flash',
+                    contents=prompt,
+                )
+                
+                if response and response.text:
+                    st.markdown("---")
+                    st.markdown(response.text)
+                else:
+                    st.error("Otrzymano pustą odpowiedź od modelu.")
+                    
+            except errors.APIError as e:
+                st.error(f"Błąd API Google: {e}")
+            except Exception as e:
+                st.error(f"Wystąpił nieoczekiwany błąd: {e}")
     else:
         st.warning("Wpisz chociaż kilka składników z lodówki!")
