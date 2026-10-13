@@ -90,43 +90,46 @@ if st.button("Szukaj przepisu 🚀"):
     if not api_key:
         st.error("Uzupełnij klucz API w sekretach Streamlita!")
     elif skladniki:
-        with st.spinner("Wyczarowujemy przepis i liczymy makro..."):
-            prompt = f"""
-            Jesteś nowoczesnym, kreatywnym szefem kuchni oraz dietetykiem.
-            
-            Mam w domu następujące składniki: {skladniki}.
-            Chcę przygotować: {typ_dania}.
-            Preferowany styl / sprzęt: {styl}.
+        prompt = f"""
+        Jesteś nowoczesnym, kreatywnym szefem kuchni oraz dietetykiem.
+        
+        Mam w domu następujące składniki: {skladniki}.
+        Chcę przygotować: {typ_dania}.
+        Preferowany styl / sprzęt: {styl}.
 
-            Twoje zadanie:
-            1. Zignoruj nudne i najbardziej oczywiste przepisy.
-            2. Zaoferuj 2-3 wyjątkowe, apetyczne propozycje dań. Jeśli pasuje to do stylu, przemyć coś w klimacie viralowych trendów z social mediów (szybkie wrapy, smash dania, pomysłowe przekąski itp.).
-            3. DLA KAŻDEGO PRZEPISU podaj:
-               - Nazwę dania
-               - Szacowane Makro i Kalorie na całe danie / porcję (Kcal, Białko, Tłuszcze, Węglowodany) - wyróżnij to ładnie graficznie/pogrubieniem!
-               - Dokładne składniki i gramaturę
-               - Instrukcję przygotowania krok po kroku
-            4. Używaj głównie tego, co podałem (+ podstawy: sól, pieprz, woda, odrobina oleju). Jeśli coś warto dokupić, napisz to krótko w osobnej sekcji na końcu.
-            
-            Napisz to czytelnie i przejrzyście w Markdown, żeby wygodnie czytało się na ekranie iPhone'a.
-            """
+        Twoje zadanie:
+        1. Zaoferuj 2-3 RÓŻNE od siebie, wyjątkowe i apetyczne propozycje dań (np. jedno na szybko, jedno z Air Fryera/patelni, jedno bardziej kreatywne).
+        2. DLA KAŻDEGO PRZEPISU podaj:
+           - Nazwę dania
+           - Szacowane Makro i Kalorie na całe danie / porcję (Kcal, Białko, Tłuszcze, Węglowodany) - wyróżnij to ładnie pogrubieniem!
+           - Dokładne składniki i gramaturę
+           - Zwięzłą instrukcję przygotowania krok po kroku
+        3. Używaj głównie tego, co podałem (+ podstawy: sól, pieprz, woda, odrobina oleju). Pisze konkretnie, bez lania wody i zbędnych wstępów.
+        
+        Napisz to czytelnie w Markdown, dopasowanym pod ekran telefonu.
+        """
 
-            try:
-                client = genai.Client(api_key=api_key)
-                response = client.models.generate_content(
-                    model='gemini-3.8-flash',
-                    contents=prompt,
-                )
+        try:
+            client = genai.Client(api_key=api_key)
+            st.markdown("---")
+            
+            # Strumieniowanie odpowiedzi na żywo
+            response_stream = client.models.generate_content_stream(
+                model='gemini-3.8-flash',
+                contents=prompt,
+            )
+            
+            # Funkcja pomocnicza, żeby płynnie przekazywać kawałki tekstu
+            def generate_chunks():
+                for chunk in response_stream:
+                    if chunk.text:
+                        yield chunk.text
+
+            st.write_stream(generate_chunks())
                 
-                if response and response.text:
-                    st.markdown("---")
-                    st.markdown(response.text)
-                else:
-                    st.error("Otrzymano pustą odpowiedź od modelu.")
-                    
-            except errors.APIError as e:
-                st.error(f"Błąd API Google: {e}")
-            except Exception as e:
-                st.error(f"Wystąpił nieoczekiwany błąd: {e}")
+        except errors.APIError as e:
+            st.error(f"Błąd API Google: {e}")
+        except Exception as e:
+            st.error(f"Wystąpił nieoczekiwany błąd: {e}")
     else:
         st.warning("Wpisz chociaż kilka składników z lodówki!")
