@@ -103,13 +103,14 @@ if st.button("Szukaj przepisu 🚀"):
                - Instrukcję przygotowania krok po kroku
             4. Używaj głównie tego, co podałem (+ podstawy: sól, pieprz, woda, odrobina oleju). Jeśli coś warto dokupić, napisz to krótko w osobnej sekcji na końcu.
             
-            Napisz to czytelnie i przejriiście w Markdown, żeby wygodnie czytało się na ekranie iPhone'a.
+            Napisz to czytelnie i przejrzyście w Markdown, żeby wygodnie czytało się na ekranie iPhone'a.
             """
 
             try:
                 client = genai.Client(api_key=api_key)
+                # Używamy dokładnie modelu wymaganego przez komunikat błędu
                 response = client.models.generate_content(
-                    model='gemini-2.5-flash',
+                    model='gemini-3.8-flash',
                     contents=prompt,
                 )
                 
