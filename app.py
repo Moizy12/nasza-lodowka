@@ -1,4 +1,5 @@
 import json
+import time
 import requests
 import streamlit as st
 
@@ -85,7 +86,7 @@ if st.button("Szukaj przepisu 🚀"):
     if not API_KEY:
         st.error("Uzupełnij klucz API w sekretach Streamlita!")
     elif skladniki:
-        with st.spinner("Szperam w przepisach i wyliczam makro..."):
+        with st.spinner("Serwery Google są lekko przeciążone, próbuję wycisnąć przepis..."):
             prompt = f"""
             Jesteś nowoczesnym, kreatywnym szefem kuchni oraz dietetykiem.
             
@@ -93,7 +94,7 @@ if st.button("Szukaj przepisu 🚀"):
             Chcę przygotować: {typ_dania}.
             Preferowany styl / sprzęt: {styl}.
 
-            Your task:
+            Twoje zadanie:
             1. Zignoruj nudne i najbardziej oczywiste przepisy.
             2. Zaoferuj 2-3 wyjątkowe, apetyczne propozycje dań. Jeśli pasuje to do stylu, przemyć coś w klimacie viralowych trendów z social mediów (szybkie wrapy, smash dania, pomysłowe przekąski itp.).
             3. DLA KAŻDEGO PRZEPISU podaj:
@@ -106,29 +107,46 @@ if st.button("Szukaj przepisu 🚀"):
             Napisz to czytelnie i przejrzyście w Markdown, żeby wygodnie czytało się na ekranie iPhone'a.
             """
 
-            # Wymuszamy model dokładnie wskazany przez komunikat błędu Google
             url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key={API_KEY}"
             headers = {"Content-Type": "application/json"}
             payload = {"contents": [{"parts": [{"text": prompt}]}]}
 
-            try:
-                response = requests.post(
-                    url, headers=headers, data=json.dumps(payload)
-                )
-                res_json = response.json()
-
-                if response.status_code == 200:
-                    tekst_odpowiedzi = res_json["candidates"][0]["content"][
-                        "parts"
-                    ][0]["text"]
-                    st.markdown("---")
-                    st.markdown(tekst_odpowiedzi)
-                else:
-                    error_msg = res_json.get("error", {}).get(
-                        "message", "Nieznany błąd API"
+            sukces = False
+            tekst_odpowiedzi = ""
+            
+            # Próbujemy 3 razy z małą przerwą w razie przeciążenia
+            for próba in range(3):
+                try:
+                    response = requests.post(
+                        url, headers=headers, data=json.dumps(payload), timeout=15
                     )
-                    st.error(f"Błąd od Google API: {error_msg}")
-            except Exception as e:
-                st.error(f"Wystąpił błąd połączenia: {e}")
+                    res_json = response.json()
+
+                    if response.status_code == 200:
+                        tekst_odpowiedzi = res_json["candidates"][0]["content"][
+                            "parts"
+                        ][0]["text"]
+                        sukces = True
+                        break
+                    else:
+                        error_msg = res_json.get("error", {}).get(
+                            "message", "Nieznany błąd API"
+                        )
+                        # Jeśli to błąd przeciążenia, odczekaj i ponów
+                        if "high demand" in error_msg.lower() or "overloaded" in error_msg.lower():
+                            time.sleep(2)
+                            continue
+                        else:
+                            st.error(f"Błąd od Google API: {error_msg}")
+                            break
+                except Exception as e:
+                    time.sleep(2)
+                    continue
+
+            if sukces:
+                st.markdown("---")
+                st.markdown(tekst_odpowiedzi)
+            else:
+                st.warning("Google ma chwilową czkawkę z ruchem (High demand). Kliknij przycisk 'Szukaj przepisu' jeszcze raz za 2-3 sekundy!")
     else:
         st.warning("Wpisz chociaż kilka składników z lodówki!")
