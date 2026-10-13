@@ -10,9 +10,14 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# Styl CSS zoptymalizowany pod iOS / Safari
+# Styl CSS oraz metadane PWA pod iOS / Safari
 st.markdown(
     """
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Lodówka">
+    
     <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
@@ -108,7 +113,6 @@ if st.button("Szukaj przepisu 🚀"):
 
             try:
                 client = genai.Client(api_key=api_key)
-                # Używamy dokładnie modelu wymaganego przez komunikat błędu
                 response = client.models.generate_content(
                     model='gemini-3.8-flash',
                     contents=prompt,
