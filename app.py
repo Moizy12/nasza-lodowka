@@ -54,6 +54,25 @@ else:
     st.error("Brak klucza GEMINI_API_KEY w ustawieniach serwera (Secrets)!")
     API_KEY = None
 
+
+def pobierz_dzialajacy_model(api_key):
+    """Pobiera pierwszą dostępną nazwę modelu obsługującego generateContent dla Twojego klucza API."""
+    url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
+    try:
+        r = requests.get(url)
+        if r.status_code == 200:
+            models = r.json().get("models", [])
+            for m in models:
+                methods = m.get("supportedGenerationMethods", [])
+                if "generateContent" in methods:
+                    # zwracamy czystą nazwę modelu np. models/gemini-2.5-flash
+                    return m["name"]
+    except Exception:
+        pass
+    # Domyślny fallback
+    return "models/gemini-2.5-flash"
+
+
 st.title("🍳 Co dzisiaj jemy?")
 st.write("Wpisz co mamy w domu, a wyczarujemy przepis z dokładnym makro!")
 
@@ -106,8 +125,8 @@ if st.button("Szukaj przepisu 🚀"):
             Napisz to czytelnie i przejrzyście w Markdown, żeby wygodnie czytało się na ekranie iPhone'a.
             """
 
-            # Zaktualizowany endpoint korzystający z uniwersalnego modelu
-            url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={API_KEY}"
+            model_name = pobierz_dzialajacy_model(API_KEY)
+            url = f"https://generativelanguage.googleapis.com/v1beta/{model_name}:generateContent?key={API_KEY}"
             headers = {"Content-Type": "application/json"}
             payload = {"contents": [{"parts": [{"text": prompt}]}]}
 
