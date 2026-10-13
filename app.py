@@ -10,21 +10,22 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# Styl CSS oraz metadane PWA pod iOS / Safari
+# Styl CSS oraz metadane PWA pod iOS / Safari bez pasków
 st.markdown(
     """
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Lodówka">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
     <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
     
-    .stApp {
-        background-color: #0f1117;
+    html, body, [data-testid="stAppViewContainer"] {
+        background-color: #0f1117 !important;
         color: #ffffff;
     }
     
@@ -69,20 +70,24 @@ skladniki = st.text_area(
     height=110,
 )
 
-col1, col2 = st.columns(2)
+# Układ kolumn dla lepszego UI na telefonie
+col1, col2, col3 = st.columns(3)
 with col1:
     typ_dania = st.selectbox(
         "Kategoria", ["Obiad", "Przekąska", "Deser", "Szybka kolacja", "Cokolwiek"]
     )
 with col2:
+    czas = st.selectbox(
+        "Czas", ["Do 15 min", "Do 30 min", "Powyżej 30 min"]
+    )
+with col3:
     styl = st.selectbox(
-        "Styl / Sprzęt",
+        "Styl",
         [
-            "Szybki (do 15 min)",
-            "Air Fryer",
-            "Kreatywny / TikTok trend",
-            "Tradycyjny / Domowy",
+            "Klasyczny / Domowy",
             "Fit / Wysokobiałkowy",
+            "TikTok trend / Kreatywny",
+            "Chrupiące / Z frytkownicy",
         ],
     )
 
@@ -95,10 +100,11 @@ if st.button("Szukaj przepisu 🚀"):
         
         Mam w domu następujące składniki: {skladniki}.
         Chcę przygotować: {typ_dania}.
-        Preferowany styl / sprzęt: {styl}.
+        Maksymalny czas przygotowania: {czas}.
+        Styl / Charakter dania: {styl}.
 
         Twoje zadanie:
-        1. Zaoferuj 2-3 RÓŻNE od siebie, wyjątkowe i apetyczne propozycje dań (np. jedno na szybko, jedno z Air Fryera/patelni, jedno bardziej kreatywne).
+        1. Zaoferuj 2-3 RÓŻNE od siebie, wyjątkowe i apetyczne propozycje dań mieszczące się w zadanym czasie ({czas}).
         2. DLA KAŻDEGO PRZEPISU podaj:
            - Nazwę dania
            - Szacowane Makro i Kalorie na całe danie / porcję (Kcal, Białko, Tłuszcze, Węglowodany) - wyróżnij to ładnie pogrubieniem!
@@ -113,13 +119,11 @@ if st.button("Szukaj przepisu 🚀"):
             client = genai.Client(api_key=api_key)
             st.markdown("---")
             
-            # Strumieniowanie odpowiedzi na żywo
             response_stream = client.models.generate_content_stream(
                 model='gemini-3.8-flash',
                 contents=prompt,
             )
             
-            # Funkcja pomocnicza, żeby płynnie przekazywać kawałki tekstu
             def generate_chunks():
                 for chunk in response_stream:
                     if chunk.text:
