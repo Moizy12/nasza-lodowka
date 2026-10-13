@@ -1,4 +1,5 @@
-import google.generativeai as genai
+import json
+import requests
 import streamlit as st
 
 # Konfiguracja strony pod telefony i tablety Apple
@@ -22,7 +23,6 @@ st.markdown(
         color: #ffffff;
     }
     
-    /* Styl przycisków w klimacie iOS */
     div.stButton > button {
         width: 100%;
         border-radius: 12px;
@@ -37,7 +37,6 @@ st.markdown(
         background-color: #ff3333;
     }
     
-    /* Stylizacja pol wpisywania */
     div.stTextArea > div > div > textarea {
         border-radius: 10px;
         background-color: #1a1d24;
@@ -50,9 +49,10 @@ st.markdown(
 
 # Pobranie klucza API z sekretów Streamlita
 if "GEMINI_API_KEY" in st.secrets:
-    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+    API_KEY = st.secrets["GEMINI_API_KEY"]
 else:
     st.error("Brak klucza GEMINI_API_KEY w ustawieniach serwera (Secrets)!")
+    API_KEY = None
 
 st.title("🍳 Co dzisiaj jemy?")
 st.write("Wpisz co mamy w domu, a wyczarujemy przepis z dokładnym makro!")
@@ -82,7 +82,9 @@ with col2:
     )
 
 if st.button("Szukaj przepisu 🚀"):
-    if skladniki:
+    if not API_KEY:
+        st.error("Uzupełnij klucz API w sekretach Streamlita!")
+    elif skladniki:
         with st.spinner("Szperam w przepisach i wyliczam makro..."):
             prompt = f"""
             Jesteś nowoczesnym, kreatywnym szefem kuchni oraz dietetykiem.
@@ -104,11 +106,28 @@ if st.button("Szukaj przepisu 🚀"):
             Napisz to czytelnie i przejrzyście w Markdown, żeby wygodnie czytało się na ekranie iPhone'a.
             """
 
-            # Używamy stabilnego modelu uniwersalnego
-            model = genai.GenerativeModel("gemini-1.5-pro")
-            response = model.generate_content(prompt)
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={API_KEY}"
+            headers = {"Content-Type": "application/json"}
+            payload = {"contents": [{"parts": [{"text": prompt}]}]}
 
-            st.markdown("---")
-            st.markdown(response.text)
+            try:
+                response = requests.post(
+                    url, headers=headers, data=json.dumps(payload)
+                )
+                res_json = response.json()
+
+                if response.status_code == 200:
+                    tekst_odpowiedzi = res_json["candidates"][0]["content"][
+                        "parts"
+                    ][0]["text"]
+                    st.markdown("---")
+                    st.markdown(tekst_odpowiedzi)
+                else:
+                    error_msg = res_json.get("error", {}).get(
+                        "message", "Nieznany błąd API"
+                    )
+                    st.error(f"Błąd od Google API: {error_msg}")
+            except Exception as e:
+                st.error(f"Wystąpił błąd połączenia: {e}")
     else:
         st.warning("Wpisz chociaż kilka składników z lodówki!")
