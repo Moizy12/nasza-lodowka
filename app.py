@@ -104,8 +104,8 @@ if st.button("Szukaj przepisu 🚀"):
             Napisz to czytelnie i przejrzyście w Markdown, żeby wygodnie czytało się na ekranie iPhone'a.
             """
 
-            # Używamy aktualnego, stabilnego modelu Gemini 3.8 Flash
-            model = genai.GenerativeModel("gemini-3.8-flash")
+            # Używamy stabilnego modelu uniwersalnego
+            model = genai.GenerativeModel("gemini-1.5-pro")
             response = model.generate_content(prompt)
 
             st.markdown("---")
