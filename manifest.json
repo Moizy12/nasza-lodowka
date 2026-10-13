@@ -1,0 +1,15 @@
+{
+  "name": "Nasza Lodówka",
+  "short_name": "Lodówka",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f1117",
+  "theme_color": "#0f1117",
+  "icons": [
+    {
+      "src": "https://img.icons8.com/color/512/cooking-book.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
